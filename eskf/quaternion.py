@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation
 from config import DEBUG
 
 import solution
-
+from cross_matrix import get_cross_matrix
 
 @dataclass
 class RotationQuaterion:
@@ -51,8 +51,13 @@ class RotationQuaterion:
         """
 
         # TODO replace this with your own code
-        quaternion_product = solution.quaternion.RotationQuaterion.multiply(
-            self, other)
+        #quaternion_product = solution.quaternion.RotationQuaterion.multiply(
+        #    self, other)
+
+        real_part = self.real_part * other.real_part - self.vec_part.T@other.vec_part
+        vec_part = other.real_part * self.vec_part + self.real_part*other.vec_part + get_cross_matrix(self.vec_part)@other.vec_part
+        quaternion_product = RotationQuaterion(real_part,vec_part)
+
 
         return quaternion_product
 
@@ -60,7 +65,9 @@ class RotationQuaterion:
         """Get the conjugate of the RotationQuaternion"""
 
         # TODO replace this with your own code
-        conj = solution.quaternion.RotationQuaterion.conjugate(self)
+        #conj = solution.quaternion.RotationQuaterion.conjugate(self)
+
+        conj = RotationQuaterion(self.real_part, -1*self.vec_part)
 
         return conj
 
@@ -72,7 +79,10 @@ class RotationQuaterion:
         """
 
         # TODO replace this with your own code
-        R = solution.quaternion.RotationQuaterion.as_rotmat(self)
+        #R = solution.quaternion.RotationQuaterion.as_rotmat(self)
+
+        S = get_cross_matrix(self.vec_part)
+        R = np.identity(3) + 2*self.real_part*S+2*S@S
 
         return R
 
@@ -88,7 +98,13 @@ class RotationQuaterion:
         """
 
         # TODO replace this with your own code
-        euler = solution.quaternion.RotationQuaterion.as_euler(self)
+        #euler = solution.quaternion.RotationQuaterion.as_euler(self)
+        eta = self.real_part
+        eps = self.vec_part
+        phi = np.arctan2(2*(eps[2]*eps[1]+eta*eps[0]),eta**2-eps[0]**2-eps[1]**2+eps[2]**2)
+        theta = np.arcsin(2*(eta*eps[1]-eps[0]*eps[2]))
+        psi = np.arctan2(2*(eps[0]*eps[1]+eta*eps[2]), eta**2+eps[0]**2-eps[1]**2-eps[2]**2)
+        euler = np.array([phi, theta, psi])
 
         return euler
 
@@ -100,7 +116,12 @@ class RotationQuaterion:
         """
 
         # TODO replace this with your own code
-        avec = solution.quaternion.RotationQuaterion.as_avec(self)
+        #avec = solution.quaternion.RotationQuaterion.as_avec(self)
+
+        alpha = np.arccos(self.real_part)*2
+        n = self.vec_part/np.sin(alpha/2)
+
+        avec = n*alpha
 
         return avec
 
