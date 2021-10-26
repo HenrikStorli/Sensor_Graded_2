@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import linalg as LA
 from numpy import ndarray
 import scipy
 from dataclasses import dataclass, field
@@ -69,9 +70,9 @@ class ESKF():
         Returns:
             CorrectedImuMeasurement: corrected IMU measurement
         """
-
-        # TODO replace this with your own code
-        z_corr = solution.eskf.ESKF.correct_z_imu(self, x_nom_prev, z_imu)
+        accelerometer_body =self.accm_correction@(z_imu.acc-x_nom_prev.accm_bias)
+        gyroscope_body=self.gyro_correction@(z_imu.avel-x_nom_prev.gyro_bias)
+        z_corr =CorrectedImuMeasurement(z_imu.ts, accelerometer_body, gyroscope_body)
 
         return z_corr
 
@@ -91,12 +92,31 @@ class ESKF():
         Returns:
             x_nom_pred (NominalState): predicted nominal state
         """
+        Ts      = z_corr.ts-x_nom_prev.ts
+        omega   = z_corr.avel-x_nom_prev.gyro_bias
+        kappa   = Ts*omega
+        Re_part = np.cos(LA.norm(kappa)/2)
+        Im_part = np.sin(LA.norm(kappa)/2)/LA.norm(kappa)*kappa
 
-        # TODO replace this with your own code
-        x_nom_pred = solution.eskf.ESKF.predict_nominal(
-            self, x_nom_prev, z_corr)
+        p_prev  = x_nom_prev.pos
+        v_prev  = x_nom_prev.vel
+        a_prev  = x_nom_prev.ori.as_rotmat()@z_corr.acc+self.g
+        ori_prev =x_nom_prev.ori
+
+        p_pred      = p_prev+Ts*v_prev+Ts**2/2*a_prev
+        v_pred      = v_prev+Ts*a_prev
+        if Ts==0:
+            ori_pred = RotationQuaterion(1,np.array([0,0,0]))
+        else:
+            ori_pred = x_nom_prev.ori@RotationQuaterion(Re_part, Im_part)
+            
+        acc_bias    = x_nom_prev.accm_bias
+        gyro_bias   = x_nom_prev.gyro_bias
+
+        x_nom_pred  = NominalState(p_pred, v_pred, ori_pred, acc_bias, gyro_bias,z_corr.ts)
 
         return x_nom_pred
+
 
     def get_error_A_continous(self,
                               x_nom_prev: NominalState,
