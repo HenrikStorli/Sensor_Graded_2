@@ -69,9 +69,15 @@ class ESKF():
         Returns:
             CorrectedImuMeasurement: corrected IMU measurement
         """
+        accelerometer_body =  self.accm_correction@(z_imu.acc - x_nom_prev.accm_bias)
+        gyroscope_body = self.gyro_correction@(z_imu.avel - x_nom_prev.gyro_bias)
+
+        z_corr = CorrectedImuMeasurement(z_imu.ts,accelerometer_body,gyroscope_body)
+        # print("z_corr guess", z_corr)
 
         # TODO replace this with your own code
-        z_corr = solution.eskf.ESKF.correct_z_imu(self, x_nom_prev, z_imu)
+        # z_corr = solution.eskf.ESKF.correct_z_imu(self, x_nom_prev, z_imu)
+        # print("z_corr true", z_corr)
 
         return z_corr
 
@@ -91,10 +97,41 @@ class ESKF():
         Returns:
             x_nom_pred (NominalState): predicted nominal state
         """
+        Ts = z_corr.ts - x_nom_prev.ts
+        #Ts = 0.01
+
+        print("Timestep:", Ts)
+
+        a = x_nom_prev.ori.as_rotmat()@z_corr.acc + self.g
+        vel = x_nom_prev.vel + Ts*a
+        pos = x_nom_prev.pos + Ts*x_nom_prev.vel + Ts**2/2*a
+
+        kappa = Ts*(z_corr.avel - x_nom_prev.gyro_bias)
+        kappa_norm = np.linalg.norm(kappa)
+
+
+        # rot = x_nom_prev.ori@RotationQuaterion(0,np.exp(rotation_vector_increment/2))
+
+        real_part = np.cos(kappa_norm/2)
+        vec_part = np.sin(kappa_norm/2)/kappa_norm*kappa
+
+        if Ts == 0:
+            rot = RotationQuaterion(1,np.array([0,0,0]))
+        else:
+            rot = x_nom_prev.ori@RotationQuaterion(real_part,vec_part)
+
+        # acc_bias = x_nom_prev.accm_bias - self.accm_bias_p*Ts*x_nom_prev.accm_bias
+        # gyro_bias = x_nom_prev.gyro_bias - self.gyro_bias_p*Ts*x_nom_prev.gyro_bias
+
+        acc_bias = (1-np.exp(-self.accm_bias_p*Ts))*x_nom_prev.accm_bias
+        gyro_bias =(1-np.exp(-self.gyro_bias_p*Ts))*x_nom_prev.gyro_bias
+
+        x_nom_pred = NominalState(pos,vel,rot,acc_bias,gyro_bias, z_corr.ts)
 
         # TODO replace this with your own code
-        x_nom_pred = solution.eskf.ESKF.predict_nominal(
-            self, x_nom_prev, z_corr)
+        # x_nom_pred = solution.eskf.ESKF.predict_nominal(
+        #     self, x_nom_prev, z_corr)
+        # print("TRUE x_nom_pred:",x_nom_pred)
 
         return x_nom_pred
 
@@ -118,15 +155,23 @@ class ESKF():
         Returns:
             A (ndarray[15,15]): A
         """
+        A = np.zeros((15,15))
+        A[block_3x3(0,1)] = np.eye(3)
+        A[block_3x3(1,2)] = -1*x_nom_prev.ori.as_rotmat()@get_cross_matrix(z_corr.acc)
+        A[block_3x3(1,3)] = -1*x_nom_prev.ori.as_rotmat()@self.accm_correction
+        A[block_3x3(2,2)] = -1*get_cross_matrix(z_corr.avel)
+        A[block_3x3(2,4)] = -1*self.gyro_correction
+        A[block_3x3(3,3)] = -1*self.accm_bias_p*np.eye(3)
+        A[block_3x3(4,4)] = -1*self.gyro_bias_p*np.eye(3)
 
         # TODO replace this with your own code
-        A = solution.eskf.ESKF.get_error_A_continous(self, x_nom_prev, z_corr)
+        #A = solution.eskf.ESKF.get_error_A_continous(self, x_nom_prev, z_corr)
 
         return A
 
     def get_error_GQGT_continous(self,
                                  x_nom_prev: NominalState
-                                 ) -> 'ndarray[15, 12]':
+                                 ) -> 'ndarray[15, 15]':
         """The noise covariance matrix, GQGT, in (10.68)
 
         From (Theorem 3.2.2) we can see that (10.68) can be written as 
@@ -142,9 +187,18 @@ class ESKF():
         Returns:
             GQGT (ndarray[15, 15]): G @ Q @ G.T
         """
+        G = np.zeros((15,12))
+        G[block_3x3(1,0)] = -1*x_nom_prev.ori.as_rotmat()
+        G[block_3x3(2,1)] = -1*np.eye(3)
+        G[block_3x3(3,2)] = np.eye(3)
+        G[block_3x3(4,3)] = np.eye(3)
+
+        Q = self.Q_err
+
+        GQGT = G@Q@G.T
 
         # TODO replace this with your own code
-        GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
+        #GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
 
         return GQGT
 
