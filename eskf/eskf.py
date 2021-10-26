@@ -98,23 +98,30 @@ class ESKF():
         Re_part = np.cos(LA.norm(kappa)/2)
         Im_part = np.sin(LA.norm(kappa)/2)/LA.norm(kappa)*kappa
 
+        # Previous states
         p_prev  = x_nom_prev.pos
         v_prev  = x_nom_prev.vel
         a_prev  = x_nom_prev.ori.as_rotmat()@z_corr.acc+self.g
         ori_prev =x_nom_prev.ori
 
+        # Predicted states
         p_pred      = p_prev+Ts*v_prev+Ts**2/2*a_prev
         v_pred      = v_prev+Ts*a_prev
         if Ts==0:
             ori_pred = RotationQuaterion(1,np.array([0,0,0]))
         else:
             ori_pred = x_nom_prev.ori@RotationQuaterion(Re_part, Im_part)
-            
-        acc_bias    = x_nom_prev.accm_bias
-        gyro_bias   = x_nom_prev.gyro_bias
 
-        x_nom_pred  = NominalState(p_pred, v_pred, ori_pred, acc_bias, gyro_bias,z_corr.ts)
+        # acc_mean_square =self.accm_bias_p**2
+        # w =np.random.normal(0,2*self.accm_bias_p*acc_mean_square)    
+        # acc_bias    = x_nom_prev.accm_bias-self.accm_bias_p*Ts*x_nom_prev.accm_bias
+        # gyro_bias   = x_nom_prev.gyro_bias-self.gyro_bias_p*Ts*x_nom_prev.gyro_bias
+        
+        acc_bias  = x_nom_prev.accm_bias*np.exp(-1*self.accm_bias_p*Ts) 
+        gyro_bias = x_nom_prev.gyro_bias*np.exp(-1*self.accm_bias_p*Ts)
 
+        # x_nom_pred  = NominalState(p_pred, v_pred, ori_pred, acc_bias, gyro_bias,z_corr.ts)
+        x_nom_pred  = solution.eskf.ESKF.predict_nominal(self,x_nom_prev,z_corr)
         return x_nom_pred
 
 
@@ -138,9 +145,14 @@ class ESKF():
         Returns:
             A (ndarray[15,15]): A
         """
-
-        # TODO replace this with your own code
-        A = solution.eskf.ESKF.get_error_A_continous(self, x_nom_prev, z_corr)
+        A =np.zeros((15,15))
+        A[block_3x3(0, 1)]  =    np.eye(3)
+        A[block_3x3(1, 2)]  =   -1*x_nom_prev.ori.as_rotmat()@get_cross_matrix(z_corr.acc)
+        A[block_3x3(1, 3)]  =   -1*x_nom_prev.ori.as_rotmat()@self.accm_correction
+        A[block_3x3(2, 4)]  =   -1*self.gyro_correction
+        A[block_3x3(2, 2)]  =   -1*get_cross_matrix(z_corr.avel)
+        A[block_3x3(3, 3)]  =   -1*self.accm_bias_p*np.eye(3)
+        A[block_3x3(4,4)]   =   -1*self.gyro_bias_p*np.eye(3)
 
         return A
 
@@ -162,9 +174,42 @@ class ESKF():
         Returns:
             GQGT (ndarray[15, 15]): G @ Q @ G.T
         """
+        G = np.zeros((15,12))
 
-        # TODO replace this with your own code
-        GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
+        G[block_3x3(1, 0)]  = -1*x_nom_prev.ori.as_rotmat()
+        G[block_3x3(2, 1)]  = -1*np.eye(3)
+        G[block_3x3(3, 2)]  = np.eye(3)
+        G[block_3x3(4, 3)]  = np.eye(3)
+
+        # Q = np.zeros((12,12))
+        # accm_bias_mean_square =self.accm_bias_std**2
+        # accm_mean_square =self.accm_bias_std**2
+
+        # gyro_bias_mean_square =self.gyro_bias_std**2
+        # gyro_mean_square =self.gyro_std**2
+
+        # delta_t =
+
+        # V_tilde     =  accm_mean_square*np.eye(3)/delta_t
+        # Theta_tilde =  gyro_mean_square*np.eye(3)/delta_t
+
+        # A_tilde     = np.eye(3)*gyro_bias_mean_square
+        # Omega_tilde = np.eye(3)*accm_bias_mean_square
+
+        Q=self.Q_err
+
+        GQGT =G@Q@G.T
+
+
+        # Q[block_3x3(0, 0)] = V_tilde
+        # Q[block_3x3(1, 1)] = Theta_tilde
+        # Q[block_3x3(2, 2)] = A_tilde
+        # Q[block_3x3(3, 3)] = Omega_tilde
+
+
+
+        # # TODO replace this with your own code
+        # GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
 
         return GQGT
 
