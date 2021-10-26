@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import ndarray
+from numpy import dtype, ndarray
 import scipy
 from dataclasses import dataclass, field
 from typing import Tuple
@@ -16,7 +16,6 @@ from quaternion import RotationQuaterion
 from cross_matrix import get_cross_matrix
 
 import solution
-
 
 @dataclass
 class ESKF():
@@ -71,7 +70,12 @@ class ESKF():
         """
 
         # TODO replace this with your own code
-        z_corr = solution.eskf.ESKF.correct_z_imu(self, x_nom_prev, z_imu)
+        #z_corr = solution.eskf.ESKF.correct_z_imu(self, x_nom_prev, z_imu)
+
+        accelerometer_body = self.accm_correction@(z_imu.acc - x_nom_prev.accm_bias)
+        gyroscope_body = self.gyro_correction@(z_imu.avel - x_nom_prev.gyro_bias)
+
+        z_corr = CorrectedImuMeasurement(z_imu.ts, accelerometer_body, gyroscope_body)
 
         return z_corr
 
@@ -92,9 +96,36 @@ class ESKF():
             x_nom_pred (NominalState): predicted nominal state
         """
 
+        Ts = z_corr.ts - x_nom_prev.ts
+
+        a = x_nom_prev.ori.as_rotmat()@z_corr.acc + self.g
+        vel = x_nom_prev.vel + Ts*a
+        pos = x_nom_prev.pos + Ts*x_nom_prev.vel + Ts**2/2*a
+
+        kappa = Ts*(z_corr.avel - x_nom_prev.gyro_bias)
+        kappa_norm = np.linalg.norm(kappa)
+
+        real_part = np.cos(kappa_norm/2)
+        vec_part = np.sin(kappa_norm/2)/kappa_norm*kappa
+
+        if Ts == 0:
+            rot = RotationQuaterion(1,np.array([0,0,0]))
+        else:
+            rot = x_nom_prev.ori@RotationQuaterion(real_part,vec_part)
+
+        #acc_bias = x_nom_prev.accm_bias*(1 - Ts*self.accm_bias_p)
+        #gyro_bias = x_nom_prev.gyro_bias*(1 - Ts*self.gyro_bias_p)
+
+        acc_bias = x_nom_prev.accm_bias*np.exp(-1*self.accm_bias_p*Ts)
+        gyro_bias = x_nom_prev.gyro_bias*np.exp(-1*self.gyro_bias_p*Ts)
+
+        x_nom_pred = NominalState(pos,vel,rot,acc_bias,gyro_bias, z_corr.ts)
+
         # TODO replace this with your own code
         x_nom_pred = solution.eskf.ESKF.predict_nominal(
             self, x_nom_prev, z_corr)
+
+        #print("Sol - our:", x_nom_pred_sol.gyro_bias - x_nom_pred.gyro_bias, x_nom_pred.ts)
 
         return x_nom_pred
 
@@ -118,9 +149,18 @@ class ESKF():
         Returns:
             A (ndarray[15,15]): A
         """
+        A = np.zeros((15,15))
+        A[block_3x3(0,1)] = np.eye(3)
+        A[block_3x3(1,2)] = -1*x_nom_prev.ori.as_rotmat()@get_cross_matrix(z_corr.acc)
+        A[block_3x3(1,3)] = -1*x_nom_prev.ori.as_rotmat()@self.accm_correction
+        A[block_3x3(2,2)] = -1*get_cross_matrix(z_corr.avel)
+        A[block_3x3(2,4)] = -1*self.gyro_correction
+        A[block_3x3(3,3)] = -1*self.accm_bias_p*np.eye(3)
+        A[block_3x3(4,4)] = -1*self.gyro_bias_p*np.eye(3)
+
 
         # TODO replace this with your own code
-        A = solution.eskf.ESKF.get_error_A_continous(self, x_nom_prev, z_corr)
+        #A = solution.eskf.ESKF.get_error_A_continous(self, x_nom_prev, z_corr)
 
         return A
 
@@ -143,8 +183,18 @@ class ESKF():
             GQGT (ndarray[15, 15]): G @ Q @ G.T
         """
 
+        G = np.zeros((15,12))
+        G[block_3x3(1,0)] = -1*x_nom_prev.ori.as_rotmat()
+        G[block_3x3(2,1)] = -1*np.eye(3)
+        G[block_3x3(3,2)] = np.eye(3)
+        G[block_3x3(4,3)] = np.eye(3)
+
+        Q = self.Q_err
+
+        GQGT = G@Q@G.T
+
         # TODO replace this with your own code
-        GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
+        #GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
 
         return GQGT
 
