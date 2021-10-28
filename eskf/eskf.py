@@ -126,7 +126,7 @@ class ESKF():
         acc_bias = (1-np.exp(-self.accm_bias_p*Ts))*x_nom_prev.accm_bias
         gyro_bias =(1-np.exp(-self.gyro_bias_p*Ts))*x_nom_prev.gyro_bias
 
-        x_nom_pred = NominalState(pos,vel,rot,acc_bias,gyro_bias, z_corr.ts)
+        #x_nom_pred = NominalState(pos,vel,rot,acc_bias,gyro_bias, z_corr.ts)
 
         # TODO replace this with your own code
         x_nom_pred = solution.eskf.ESKF.predict_nominal(
@@ -339,11 +339,20 @@ class ESKF():
         Returns:
             H (ndarray[3, 15]): [description]
         """
+        arm = self.lever_arm
+        as_euler = x_nom.ori.as_euler()
+        rotmat =  x_nom.ori.as_rotmat()
+
+        H_guess = np.zeros((3,15))
+        H_guess[0:3,0:3] = np.eye(3)
+        H_guess[0:3,6:9] = -rotmat@get_cross_matrix(arm)
+
 
         # TODO replace this with your own code
-        H = solution.eskf.ESKF.get_gnss_measurment_jac(self, x_nom)
+        # H = solution.eskf.ESKF.get_gnss_measurment_jac(self, x_nom)
+        # print("H_guess - H", H_guess[0:3,6:9] - H[0:3,6:9])
 
-        return H
+        return H_guess
 
     def get_gnss_cov(self, z_gnss: GnssMeasurement) -> 'ndarray[3,3]':
         """Use this function in predict_gnss_measurement to get R. 
@@ -384,12 +393,43 @@ class ESKF():
         Returns:
             z_gnss_pred_gauss (MultiVarGaussStamped): gnss prediction gaussian
         """
+        R = self.get_gnss_cov(z_gnss) # 'ndarray[3,3]':
+
+        H = self.get_gnss_measurment_jac(x_nom) # 'ndarray[3,15]':
+
+
+        # True state:
+
+
+        z_gnss_pred_gauss_cov = H@x_err.cov@H.T + R
+
+        # nom_state_as_euler = np.zeros((15,))
+        # nom_state_as_euler[0:3] = x_nom.pos
+        # nom_state_as_euler[3:6] = x_nom.vel
+        # nom_state_as_euler[6:9] = x_nom.ori.as_avec()
+        # nom_state_as_euler[9:12] = x_nom.accm_bias
+        # nom_state_as_euler[12:15] = x_nom.gyro_bias
+
+        # z_gnss_pred_gauss_mean = H@x_err.mean + x_nom.pos - self.lever_arm
+        # z_gnss_pred_gauss_mean = x_nom.pos + x_err.pos - self.lever_arm
+
+        z_gnss_pred_gauss_mean = H@x_err.mean + x_nom.pos + self.lever_arm
+
+
+
+        # predicted_x_err_gauss = self.predict_x_err(x_nom,x_err,z_corr) # ErrorStateGauss:
+
+        z_gnss_pred_gauss_guess = MultiVarGaussStamped(z_gnss_pred_gauss_mean,z_gnss_pred_gauss_cov,z_gnss.ts)
+
 
         # TODO replace this with your own code
         z_gnss_pred_gauss = solution.eskf.ESKF.predict_gnss_measurement(
             self, x_nom, x_err, z_gnss)
 
-        return z_gnss_pred_gauss
+        # print("z_gnss_pred_gauss_guess - z_gnss_pred_gauss MEAN:",z_gnss_pred_gauss_mean - z_gnss_pred_gauss.mean)
+        # print("z_gnss_pred_gauss_guess - z_gnss_pred_gauss COV:", z_gnss_pred_gauss_cov - z_gnss_pred_gauss.cov)
+
+        return z_gnss_pred_gauss_guess
 
     def get_x_err_upd(self,
                       x_nom: NominalState,
@@ -415,10 +455,21 @@ class ESKF():
         Returns:
             x_err_upd_gauss (ErrorStateGauss): updated error state gaussian
         """
+        H = self.get_gnss_measurment_jac(x_nom) # 'ndarray[3,15]':
+        P = x_err.cov
+        R = self.get_gnss_cov(z_gnss)
+        W = P@H.T@np.linalg.inv(H@P@H.T + R)
+
+        x_err_mean = W@(z_gnss.pos - z_gnss_pred_gauss.mean)
+
+        I_WH = np.eye(*P.shape) - W @ H
+        P_upd = (I_WH @ P @ I_WH.T + W @ R @ W.T)
+
+        x_err_upd_gauss = ErrorStateGauss(x_err_mean,P_upd,z_gnss.ts)
 
         # TODO replace this with your own code
-        x_err_upd_gauss = solution.eskf.ESKF.get_x_err_upd(
-            self, x_nom, x_err, z_gnss_pred_gauss, z_gnss)
+        # x_err_upd_gauss = solution.eskf.ESKF.get_x_err_upd(
+        #     self, x_nom, x_err, z_gnss_pred_gauss, z_gnss)
 
         return x_err_upd_gauss
 
@@ -439,6 +490,17 @@ class ESKF():
             x_nom_inj (NominalState): nominal state after injection
             x_err_inj (ErrorStateGauss): error state gaussian after injection
         """
+
+        # x_true = np.zeros((15,))
+        # x_true[0:3] = x_nom_prev.pos + x_err_upd.pos
+        # x_true[3:6] = 
+        # x_true[6:9] = 
+        # x_true[9:12] =
+        # x_true[12:15] =  
+
+
+        # x_nom_inj = 
+        # x_err_inj = 
 
         # TODO replace this with your own code
         x_nom_inj, x_err_inj = solution.eskf.ESKF.inject(
