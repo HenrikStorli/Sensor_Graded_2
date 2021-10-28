@@ -253,10 +253,20 @@ class ESKF():
             Ad (ndarray[15, 15]): discrede transition matrix
             GQGTd (ndarray[15, 15]): discrete noise covariance matrix
         """
+        A = self.get_error_A_continous(x_nom_prev, z_corr)
+        GQGT = self.get_error_GQGT_continous(x_nom_prev)
 
-        # TODO replace this with your own code
-        Ad, GQGTd = solution.eskf.ESKF.get_discrete_error_diff(
-            self, x_nom_prev, z_corr)
+        Ts = z_corr.ts - x_nom_prev.ts
+
+        V = np.zeros((30,30))
+        V = np.block([[-A,GQGT],
+                    [np.zeros((15,15)),A.T]])
+
+        Van_loan_V = self.get_van_loan_matrix(V*Ts)
+        
+        GQGTd =Van_loan_V[15:30,15:30].T @ Van_loan_V[0:15,15:30] #V1^T*V2 = Q \approx GQGTd
+        
+        Ad = Van_loan_V[15:30,15:30].T
 
         return Ad, GQGTd
 
@@ -278,10 +288,14 @@ class ESKF():
         Returns:
             x_err_pred (ErrorStateGauss): predicted error state
         """
+        Ts = z_corr.ts - x_nom_prev.ts
 
-        # TODO replace this with your own code
-        x_err_pred = solution.eskf.ESKF.predict_x_err(
-            self, x_nom_prev, x_err_prev_gauss, z_corr)
+        Ad,GQGTd = self.get_discrete_error_diff(x_nom_prev, z_corr)
+
+        x_err_pred_mean = Ad@x_err_prev_gauss.mean
+        x_err_pred_covariance = Ad@x_err_prev_gauss.cov@Ad.T+GQGTd
+        
+        x_err_pred = ErrorStateGauss(x_err_pred_mean, x_err_pred_covariance, z_corr.ts)
 
         return x_err_pred
 
@@ -301,10 +315,12 @@ class ESKF():
             x_nom_pred (NominalState): predicted nominal state
             x_err_pred (ErrorStateGauss): predicted error state
         """
+        z_corr = self.correct_z_imu(x_nom_prev, z_imu)
+        x_nom_pred, x_err_pred = [self.predict_nominal(x_nom_prev, z_corr),self.predict_x_err(x_nom_prev, x_err_gauss, z_corr)]
 
         # TODO replace this with your own code
-        x_nom_pred, x_err_pred = solution.eskf.ESKF.predict_from_imu(
-            self, x_nom_prev, x_err_gauss, z_imu)
+        # x_nom_pred, x_err_pred = solution.eskf.ESKF.predict_from_imu(
+        #     self, x_nom_prev, x_err_gauss, z_imu)
 
         return x_nom_pred, x_err_pred
 
@@ -312,16 +328,20 @@ class ESKF():
         """Get the measurement jacobian, H.
 
         Hint: the gnss antenna has a relative position to the center given by
-        self.lever_arm. How will the gnss measurement change if the drone is 
-        rotated differently? Use get_cross_matrix and some other stuff :) 
+        self.lever_arm. H Use get_cross_matrix and some other stuff :) 
 
         Returns:
             H (ndarray[3, 15]): [description]
         """
+        H = np.zeros((3,15))
 
+        H[0:3,0:3] = np.diag([1,1,1])
+        arm =self.lever_arm
+        rotmat = x_nom.ori.as_rotmat()
+
+        H[0:3,6:9] =-rotmat@get_cross_matrix(arm)
         # TODO replace this with your own code
-        H = solution.eskf.ESKF.get_gnss_measurment_jac(self, x_nom)
-
+        #H1 = solution.eskf.ESKF.get_gnss_measurment_jac(self, x_nom)
         return H
 
     def get_gnss_cov(self, z_gnss: GnssMeasurement) -> 'ndarray[3,3]':
@@ -364,9 +384,21 @@ class ESKF():
             z_gnss_pred_gauss (MultiVarGaussStamped): gnss prediction gaussian
         """
 
-        # TODO replace this with your own code
-        z_gnss_pred_gauss = solution.eskf.ESKF.predict_gnss_measurement(
-            self, x_nom, x_err, z_gnss)
+        H = self.get_gnss_measurment_jac(x_nom)
+        R =self.get_gnss_cov(z_gnss)
+
+        S = H@x_err.cov@H.T + R
+
+        print('Leverarm:',x_nom.ori.as_rotmat()@self.lever_arm)
+
+        x_true = H @ (x_err.mean) +x_nom.pos + x_nom.ori.as_rotmat()@self.lever_arm
+        z_gnss_pred_gauss=MultiVarGaussStamped(x_true, S, z_gnss.ts)
+
+        # z_gnss_pred_gauss = solution.eskf.ESKF.predict_gnss_measurement(
+        #     self, x_nom, x_err, z_gnss)
+        
+        print('Mean - Guess mean :',(z_gnss_pred_gauss.mean-x_true),self.lever_arm)
+        print('Cov - cov_guess:', z_gnss_pred_gauss.cov-S)
 
         return z_gnss_pred_gauss
 
