@@ -98,42 +98,39 @@ class ESKF():
             x_nom_pred (NominalState): predicted nominal state
         """
         Ts = z_corr.ts - x_nom_prev.ts
-        #Ts = 0.01
 
-        print("Timestep:", Ts)
+        if Ts == 0:
+            return x_nom_prev
 
         a = x_nom_prev.ori.as_rotmat()@z_corr.acc + self.g
         vel = x_nom_prev.vel + Ts*a
         pos = x_nom_prev.pos + Ts*x_nom_prev.vel + Ts**2/2*a
 
-        kappa = Ts*(z_corr.avel - x_nom_prev.gyro_bias)
+        kappa = Ts*(z_corr.avel)# - x_nom_prev.gyro_bias)
         kappa_norm = np.linalg.norm(kappa)
-
-
-        # rot = x_nom_prev.ori@RotationQuaterion(0,np.exp(rotation_vector_increment/2))
 
         real_part = np.cos(kappa_norm/2)
         vec_part = np.sin(kappa_norm/2)/kappa_norm*kappa
 
-        if Ts == 0:
-            return x_nom_prev
-        else:
-            rot = x_nom_prev.ori@RotationQuaterion(real_part,vec_part)
+        rot = x_nom_prev.ori@RotationQuaterion(real_part,vec_part)
 
-        # acc_bias = x_nom_prev.accm_bias - self.accm_bias_p*Ts*x_nom_prev.accm_bias
-        # gyro_bias = x_nom_prev.gyro_bias - self.gyro_bias_p*Ts*x_nom_prev.gyro_bias
+        acc_bias = np.exp(-self.accm_bias_p*Ts) * x_nom_prev.accm_bias
+        gyro_bias = np.exp(-self.gyro_bias_p*Ts) * x_nom_prev.gyro_bias
 
-        acc_bias = (1-np.exp(-self.accm_bias_p*Ts))*x_nom_prev.accm_bias
-        gyro_bias =(1-np.exp(-self.gyro_bias_p*Ts))*x_nom_prev.gyro_bias
-
-        #x_nom_pred = NominalState(pos,vel,rot,acc_bias,gyro_bias, z_corr.ts)
+        x_nom_pred_guess = NominalState(pos,vel,rot,acc_bias,gyro_bias, z_corr.ts)
 
         # TODO replace this with your own code
-        x_nom_pred = solution.eskf.ESKF.predict_nominal(
-            self, x_nom_prev, z_corr)
-        # print("TRUE x_nom_pred:",x_nom_pred)
+        # x_nom_pred = solution.eskf.ESKF.predict_nominal(
+        #     self, x_nom_prev, z_corr)
 
-        return x_nom_pred
+        # print("pos:", pos - x_nom_pred.pos)
+        # print("vel", vel - x_nom_pred.vel)
+        # print("Ori real part:", rot.real_part - x_nom_pred.ori.real_part)
+        # print("Ori vec part:", rot.vec_part - x_nom_pred.ori.vec_part)
+        # print("accm bias:", gyro_bias -x_nom_pred.gyro_bias )
+        # print("gyro bias:", gyro_bias -x_nom_pred.gyro_bias)
+
+        return x_nom_pred_guess
 
     def get_error_A_continous(self,
                               x_nom_prev: NominalState,
@@ -165,7 +162,7 @@ class ESKF():
         A[block_3x3(4,4)] = -1*self.gyro_bias_p*np.eye(3)
 
         # TODO replace this with your own code
-        #A = solution.eskf.ESKF.get_error_A_continous(self, x_nom_prev, z_corr)
+        # A = solution.eskf.ESKF.get_error_A_continous(self, x_nom_prev, z_corr)
 
         return A
 
@@ -413,7 +410,7 @@ class ESKF():
         # z_gnss_pred_gauss_mean = H@x_err.mean + x_nom.pos - self.lever_arm
         # z_gnss_pred_gauss_mean = x_nom.pos + x_err.pos - self.lever_arm
 
-        z_gnss_pred_gauss_mean = H@x_err.mean + x_nom.pos + self.lever_arm
+        z_gnss_pred_gauss_mean = H @ (x_err.mean) +x_nom.pos + x_nom.ori.as_rotmat()@self.lever_arm #H@x_err.mean + x_nom.pos + self.lever_arm
 
 
 
@@ -423,8 +420,8 @@ class ESKF():
 
 
         # TODO replace this with your own code
-        z_gnss_pred_gauss = solution.eskf.ESKF.predict_gnss_measurement(
-            self, x_nom, x_err, z_gnss)
+        # z_gnss_pred_gauss = solution.eskf.ESKF.predict_gnss_measurement(
+        #     self, x_nom, x_err, z_gnss)
 
         # print("z_gnss_pred_gauss_guess - z_gnss_pred_gauss MEAN:",z_gnss_pred_gauss_mean - z_gnss_pred_gauss.mean)
         # print("z_gnss_pred_gauss_guess - z_gnss_pred_gauss COV:", z_gnss_pred_gauss_cov - z_gnss_pred_gauss.cov)
