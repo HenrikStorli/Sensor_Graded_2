@@ -422,10 +422,21 @@ class ESKF():
         Returns:
             x_err_upd_gauss (ErrorStateGauss): updated error state gaussian
         """
+        H = self.get_gnss_measurment_jac(x_nom) # 'ndarray[3,15]':
+        P = x_err.cov
+        R = self.get_gnss_cov(z_gnss)
+        W = P@H.T@np.linalg.inv(H@P@H.T + R)
+
+        x_err_mean = W@(z_gnss.pos - z_gnss_pred_gauss.mean)
+
+        I_WH = np.eye(*P.shape) - W @ H
+        P_upd = (I_WH @ P @ I_WH.T + W @ R @ W.T)
+
+        x_err_upd_gauss = ErrorStateGauss(x_err_mean,P_upd,z_gnss.ts)
 
         # TODO replace this with your own code
-        x_err_upd_gauss = solution.eskf.ESKF.get_x_err_upd(
-            self, x_nom, x_err, z_gnss_pred_gauss, z_gnss)
+        # x_err_upd_gauss = solution.eskf.ESKF.get_x_err_upd(
+        #     self, x_nom, x_err, z_gnss_pred_gauss, z_gnss)
 
         return x_err_upd_gauss
 
@@ -447,15 +458,34 @@ class ESKF():
             x_err_inj (ErrorStateGauss): error state gaussian after injection
         """
 
-        # TODO replace this with your own code
-        x_nom_inj, x_err_inj = solution.eskf.ESKF.inject(
-            self, x_nom_prev, x_err_upd)
+        x_true_pos = x_nom_prev.pos + x_err_upd.pos
+        x_true_vel = x_nom_prev.vel + x_err_upd.vel
+        x_true_ori = x_nom_prev.ori@RotationQuaterion(1,1/2*x_err_upd.avec)
+        x_true_accm_bias = x_nom_prev.accm_bias + x_err_upd.accm_bias
+        x_true_gyro_bias =  x_nom_prev.gyro_bias + x_err_upd.gyro_bias
 
+
+        x_nom_inj = NominalState(x_true_pos, x_true_vel, x_true_ori, x_true_accm_bias, x_true_gyro_bias,x_err_upd.ts)
+
+        G = np.zeros_like(x_err_upd.cov)
+        G[0:6,0:6] = np.eye(6)
+        G[6:9,6:9] = np.eye(3) - get_cross_matrix(1/2*x_err_upd.avec)
+        G[9:15,9:15] = np.eye(6)
+
+        P = x_err_upd.cov
+        P = G@P@G.T
+        x_err_inj = ErrorStateGauss(np.zeros_like(x_err_upd.mean),P,x_err_upd.ts)
+
+        # TODO replace this with your own code
+        # x_nom_inj, x_err_inj = solution.eskf.ESKF.inject(
+        #     self, x_nom_prev, x_err_upd)
+        
         return x_nom_inj, x_err_inj
+
 
     def update_from_gnss(self,
                          x_nom_prev: NominalState,
-                         x_err_prev: NominalState,
+                         x_err_prev: ErrorStateGauss,
                          z_gnss: GnssMeasurement,
                          ) -> Tuple[NominalState,
                                     ErrorStateGauss,
@@ -476,7 +506,11 @@ class ESKF():
         """
 
         # TODO replace this with your own code
-        x_nom_inj, x_err_inj, z_gnss_pred_gauss = solution.eskf.ESKF.update_from_gnss(
-            self, x_nom_prev, x_err_prev, z_gnss)
+        z_gnss_pred_gauss = self.predict_gnss_measurement(x_nom_prev,x_err_prev,z_gnss)
+        x_err_upd = self.get_x_err_upd(x_nom_prev, x_err_prev, z_gnss_pred_gauss,z_gnss)
+        x_nom_inj, x_err_inj = self.inject(x_nom_prev, x_err_upd)
+
+        # x_nom_inj, x_err_inj, z_gnss_pred_gauss = solution.eskf.ESKF.update_from_gnss(
+        #     self, x_nom_prev, x_err_prev, z_gnss)
 
         return x_nom_inj, x_err_inj, z_gnss_pred_gauss
