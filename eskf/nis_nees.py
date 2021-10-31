@@ -99,8 +99,8 @@ def get_NEES(error: 'ndarray[15]',
     # TODO replace this with your own code
     # NEES = solution.nis_nees.get_NEES(error, x_err, marginal_idxs)
 
-    print("NEES:", NEES)
-    print("marginal_idxs", marginal_idxs)
+    # print("NEES:", NEES)
+    # print("marginal_idxs", marginal_idxs)
     return NEES
 
 
