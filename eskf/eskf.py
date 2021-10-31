@@ -117,11 +117,11 @@ class ESKF():
         # acc_bias    = x_nom_prev.accm_bias-self.accm_bias_p*Ts*x_nom_prev.accm_bias
         # gyro_bias   = x_nom_prev.gyro_bias-self.gyro_bias_p*Ts*x_nom_prev.gyro_bias
         
-        acc_bias  = x_nom_prev.accm_bias*np.exp(-1*self.accm_bias_p*Ts) 
-        gyro_bias = x_nom_prev.gyro_bias*np.exp(-1*self.accm_bias_p*Ts)
+        acc_bias = (1-np.exp(-self.accm_bias_p*Ts))*x_nom_prev.accm_bias
+        gyro_bias =(1-np.exp(-self.gyro_bias_p*Ts))*x_nom_prev.gyro_bias
 
-        # x_nom_pred  = NominalState(p_pred, v_pred, ori_pred, acc_bias, gyro_bias,z_corr.ts)
-        x_nom_pred  = solution.eskf.ESKF.predict_nominal(self,x_nom_prev,z_corr)
+        x_nom_pred  = NominalState(p_pred, v_pred, ori_pred, acc_bias, gyro_bias,z_corr.ts)
+        #x_nom_pred  = solution.eskf.ESKF.predict_nominal(self,x_nom_prev,z_corr)
         return x_nom_pred
 
 
