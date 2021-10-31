@@ -488,26 +488,34 @@ class ESKF():
             x_err_inj (ErrorStateGauss): error state gaussian after injection
         """
 
-        # x_true = np.zeros((15,))
-        # x_true[0:3] = x_nom_prev.pos + x_err_upd.pos
-        # x_true[3:6] = 
-        # x_true[6:9] = 
-        # x_true[9:12] =
-        # x_true[12:15] =  
+
+        x_true_pos = x_nom_prev.pos + x_err_upd.pos
+        x_true_vel = x_nom_prev.vel + x_err_upd.vel
+        x_true_ori = x_nom_prev.ori@RotationQuaterion(1,1/2*x_err_upd.avec)
+        x_true_accm_bias = x_nom_prev.accm_bias + x_err_upd.accm_bias
+        x_true_gyro_bias =  x_nom_prev.gyro_bias + x_err_upd.gyro_bias
 
 
-        # x_nom_inj = 
-        # x_err_inj = 
+        x_nom_inj = NominalState(x_true_pos, x_true_vel, x_true_ori, x_true_accm_bias, x_true_gyro_bias,x_err_upd.ts)
+
+        G = np.zeros_like(x_err_upd.cov)
+        G[0:6,0:6] = np.eye(6)
+        G[6:9,6:9] = np.eye(3) - get_cross_matrix(1/2*x_err_upd.avec)
+        G[9:15,9:15] = np.eye(6)
+
+        P = x_err_upd.cov
+        P = G@P@G.T
+        x_err_inj = ErrorStateGauss(np.zeros_like(x_err_upd.mean),P,x_err_upd.ts)
 
         # TODO replace this with your own code
-        x_nom_inj, x_err_inj = solution.eskf.ESKF.inject(
-            self, x_nom_prev, x_err_upd)
+        # x_nom_inj, x_err_inj = solution.eskf.ESKF.inject(
+        #     self, x_nom_prev, x_err_upd)
 
         return x_nom_inj, x_err_inj
 
     def update_from_gnss(self,
                          x_nom_prev: NominalState,
-                         x_err_prev: NominalState,
+                         x_err_prev: ErrorStateGauss,
                          z_gnss: GnssMeasurement,
                          ) -> Tuple[NominalState,
                                     ErrorStateGauss,
@@ -517,7 +525,7 @@ class ESKF():
 
         Args:
             x_nom_prev (NominalState): [description]
-            x_nom_prev (NominalState): [description]
+            x_err_prev (ErrorStateGauss): [description]
             z_gnss (GnssMeasurement): gnss measurement
 
         Returns:
@@ -526,9 +534,12 @@ class ESKF():
             z_gnss_pred_gauss (MultiVarGaussStamped): predicted gnss 
                 measurement, used for NIS calculations.
         """
-
         # TODO replace this with your own code
-        x_nom_inj, x_err_inj, z_gnss_pred_gauss = solution.eskf.ESKF.update_from_gnss(
-            self, x_nom_prev, x_err_prev, z_gnss)
+        z_gnss_pred_gauss = self.predict_gnss_measurement(x_nom_prev,x_err_prev,z_gnss)
+        x_err_upd = self.get_x_err_upd(x_nom_prev, x_err_prev, z_gnss_pred_gauss,z_gnss)
+        x_nom_inj, x_err_inj = self.inject(x_nom_prev, x_err_upd)
+
+        # x_nom_inj, x_err_inj, z_gnss_pred_gauss = solution.eskf.ESKF.update_from_gnss(
+        #     self, x_nom_prev, x_err_prev, z_gnss)
 
         return x_nom_inj, x_err_inj, z_gnss_pred_gauss
