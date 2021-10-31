@@ -93,7 +93,10 @@ class ESKF():
             x_nom_pred (NominalState): predicted nominal state
         """
         Ts      = z_corr.ts-x_nom_prev.ts
-        omega   = z_corr.avel-x_nom_prev.gyro_bias
+        if Ts == 0:
+            return x_nom_prev
+            
+        omega   = z_corr.avel
         kappa   = Ts*omega
         Re_part = np.cos(LA.norm(kappa)/2)
         Im_part = np.sin(LA.norm(kappa)/2)/LA.norm(kappa)*kappa
@@ -107,19 +110,11 @@ class ESKF():
         # Predicted states
         p_pred      = p_prev+Ts*v_prev+Ts**2/2*a_prev
         v_pred      = v_prev+Ts*a_prev
-        if Ts==0:
-            return x_nom_prev
-        else:
-            ori_pred = x_nom_prev.ori@RotationQuaterion(Re_part, Im_part)
 
+        ori_pred = x_nom_prev.ori@RotationQuaterion(Re_part,Im_part)
 
-        # acc_mean_square =self.accm_bias_p**2
-        # w =np.random.normal(0,2*self.accm_bias_p*acc_mean_square)    
-        # acc_bias    = x_nom_prev.accm_bias-self.accm_bias_p*Ts*x_nom_prev.accm_bias
-        # gyro_bias   = x_nom_prev.gyro_bias-self.gyro_bias_p*Ts*x_nom_prev.gyro_bias
-        
-        acc_bias = (1-np.exp(-self.accm_bias_p*Ts))*x_nom_prev.accm_bias
-        gyro_bias =(1-np.exp(-self.gyro_bias_p*Ts))*x_nom_prev.gyro_bias
+        acc_bias = np.exp(-self.accm_bias_p*Ts) * x_nom_prev.accm_bias
+        gyro_bias = np.exp(-self.gyro_bias_p*Ts) * x_nom_prev.gyro_bias
 
         x_nom_pred  = NominalState(p_pred, v_pred, ori_pred, acc_bias, gyro_bias,z_corr.ts)
         #x_nom_pred  = solution.eskf.ESKF.predict_nominal(self,x_nom_prev,z_corr)
