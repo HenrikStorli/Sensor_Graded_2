@@ -108,9 +108,10 @@ class ESKF():
         p_pred      = p_prev+Ts*v_prev+Ts**2/2*a_prev
         v_pred      = v_prev+Ts*a_prev
         if Ts==0:
-            ori_pred = RotationQuaterion(1,np.array([0,0,0]))
+            return x_nom_prev
         else:
             ori_pred = x_nom_prev.ori@RotationQuaterion(Re_part, Im_part)
+
 
         # acc_mean_square =self.accm_bias_p**2
         # w =np.random.normal(0,2*self.accm_bias_p*acc_mean_square)    
