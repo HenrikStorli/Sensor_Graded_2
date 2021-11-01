@@ -72,6 +72,7 @@ def main():
         print(f"Running {config.MAX_TIME} seconds of simulated data set")
         (x_true_data, z_imu_data, z_gnss_data, drone_params
          ) = load_sim_data(config.MAX_TIME)
+        # print("x_true_data", x_true_data[0])
         tuning_params = tuning_sim.tuning_params_sim
         x_nom_init = tuning_sim.x_nom_init_sim
         x_err_init = tuning_sim.x_err_init_sim
