@@ -142,7 +142,7 @@ def plot_nis(times, NIS_xyz, NIS_xy, NIS_z, confidence=0.90):
 
 
 def plot_nees(times, pos, vel, avec, accm, gyro, confidence=0.90):
-    ci_lower, ci_upper = np.array(chi2.interval(confidence, 4))
+    ci_lower, ci_upper = np.array(chi2.interval(confidence, 3))
     fig, ax = plt.subplots(5, 1, sharex=True, figsize=(6.4, 9))
     fig.canvas.manager.set_window_title("NEES")
 

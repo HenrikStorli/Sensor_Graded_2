@@ -385,7 +385,7 @@ class ESKF():
 
         S = H@x_err.cov@H.T + R
 
-        print('Leverarm:',x_nom.ori.as_rotmat()@self.lever_arm)
+       #print('Leverarm:',x_nom.ori.as_rotmat()@self.lever_arm)
 
         x_true = H @ (x_err.mean) +x_nom.pos + x_nom.ori.as_rotmat()@self.lever_arm
         z_gnss_pred_gauss=MultiVarGaussStamped(x_true, S, z_gnss.ts)
@@ -393,8 +393,8 @@ class ESKF():
         # z_gnss_pred_gauss = solution.eskf.ESKF.predict_gnss_measurement(
         #     self, x_nom, x_err, z_gnss)
         
-        print('Mean - Guess mean :',(z_gnss_pred_gauss.mean-x_true),self.lever_arm)
-        print('Cov - cov_guess:', z_gnss_pred_gauss.cov-S)
+        #print('Mean - Guess mean :',(z_gnss_pred_gauss.mean-x_true),self.lever_arm)
+        #print('Cov - cov_guess:', z_gnss_pred_gauss.cov-S)
 
         return z_gnss_pred_gauss
 
