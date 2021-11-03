@@ -9,6 +9,8 @@ from datatypes.eskf_states import NominalState
 import config
 from scipy.stats import chi2
 
+from nis_nees import get_average
+
 plot_folder = Path(__file__).parents[1].joinpath('plots')
 plot_folder.mkdir(exist_ok=True)
 
@@ -123,14 +125,23 @@ def plot_nis(times, NIS_xyz, NIS_xy, NIS_z, confidence=0.90):
         frac_below = n_below/n_total
         frac_above = n_above/n_total
 
+        # -------------------------- ADDED ANIS ----------------------------
+        ANIS = get_average(NIS)
+        ANIS_array = np.ones_like(NIS)*ANIS
+
+        
+        # ---------------------------------------------------------------------
+
         ax[i].plot(times, NIS, label=fr"$NIS_{{{name}}}$")
+        ax[i].plot(times, ANIS_array, label=fr"$ANIS_{{{name}}}$") # Plotting ANIS
         ax[i].hlines([ci_lower, ci_upper], min(times), max(times), 'C3', ":",
                      label=f"{confidence:2.1%} conf")
         ax[i].set_title(
             f"NIS ${{{name}}}$ "
             f"({frac_inside:2.1%} inside, {frac_below:2.1%} below, "
             f"{frac_above:2.1%} above "
-            f" [{confidence:2.1%} conf])")
+            f" [{confidence:2.1%} conf])"
+            f"ANIS:{ANIS:2.1f}")
 
         ax[i].set_yscale('log')
 
@@ -142,7 +153,7 @@ def plot_nis(times, NIS_xyz, NIS_xy, NIS_z, confidence=0.90):
 
 
 def plot_nees(times, pos, vel, avec, accm, gyro, confidence=0.90):
-    ci_lower, ci_upper = np.array(chi2.interval(confidence, 4))
+    ci_lower, ci_upper = np.array(chi2.interval(confidence, 3))
     fig, ax = plt.subplots(5, 1, sharex=True, figsize=(6.4, 9))
     fig.canvas.manager.set_window_title("NEES")
 
@@ -158,7 +169,13 @@ def plot_nees(times, pos, vel, avec, accm, gyro, confidence=0.90):
         frac_below = n_below/n_total
         frac_above = n_above/n_total
 
+        # -------------------------- ADDED ANEES ----------------------------
+        ANEES = get_average(NEES)
+        ANEES_array = np.ones_like(NEES)*ANEES
+        # ---------------------------------------------------------------------
+        
         ax[i].plot(times, NEES, label=fr"$NEES_{{{name}}}$")
+        ax[i].plot(times, ANEES_array, label=fr"$ANEES_{{{name}}}$") # Plotting ANEES
         ax[i].hlines([ci_lower, ci_upper], min(times), max(times), 'C3', ":",
                      label=f"{confidence:2.1%} conf")
         ax[i].set_title(
@@ -166,6 +183,7 @@ def plot_nees(times, pos, vel, avec, accm, gyro, confidence=0.90):
             fr"({frac_inside:2.1%} inside, "
             f" {frac_below:2.1%} below, {frac_above:2.1%} above "
             f"[{confidence:2.1%} conf])"
+            f"ANEES:{ANEES:2.1f}"
         )
 
         ax[i].set_yscale('log')

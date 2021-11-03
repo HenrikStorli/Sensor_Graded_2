@@ -9,7 +9,7 @@ tuning_params_sim = ESKFTuningParams(
     accm_bias_p=2., # good value. 1 is also a good value
 
     gyro_std=0.005,
-    gyro_bias_std=0.003,
+    gyro_bias_std=0.0007,
     gyro_bias_p=1.,
 
     gnss_std_ne=1.,
@@ -24,9 +24,9 @@ x_nom_init_sim = NominalState(
     ts=0.)
 
 init_std_sim = np.repeat(repeats=3,  # repeat each element 3 times
-                         a=[1.,  # position
-                            1.,  # velocity
-                            np.deg2rad(1),  # angle vector
-                            0.12,  # accelerometer bias
-                            0.001])  # gyro bias
+                         a=[0.000000005,  # position
+                            0.000000006,  # velocity
+                            np.deg2rad(0.1),  # angle vector
+                            0.0000000061,  # accelerometer bias
+                            0.0000000075])  # gyro bias
 x_err_init_sim = ErrorStateGauss(np.zeros(15), np.diag(init_std_sim**2), 0.)
