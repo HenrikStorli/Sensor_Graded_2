@@ -120,7 +120,7 @@ class ESKF():
         x_nom_pred_guess = NominalState(pos,vel,rot,acc_bias,gyro_bias, z_corr.ts)
 
         # TODO replace this with your own code
-        # x_nom_pred = solution.eskf.ESKF.predict_nominal(
+        # x_nom_pred_guess = solution.eskf.ESKF.predict_nominal(
         #     self, x_nom_prev, z_corr)
 
         # print("pos:", pos - x_nom_pred.pos)
@@ -195,7 +195,7 @@ class ESKF():
         GQGT = G@Q@G.T
 
         # TODO replace this with your own code
-        #GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
+        # GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
 
         return GQGT
 
@@ -346,7 +346,7 @@ class ESKF():
 
 
         # TODO replace this with your own code
-        # H = solution.eskf.ESKF.get_gnss_measurment_jac(self, x_nom)
+        # H_guess = solution.eskf.ESKF.get_gnss_measurment_jac(self, x_nom)
         # print("H_guess - H", H_guess[0:3,6:9] - H[0:3,6:9])
 
         return H_guess
@@ -420,7 +420,7 @@ class ESKF():
 
 
         # TODO replace this with your own code
-        # z_gnss_pred_gauss = solution.eskf.ESKF.predict_gnss_measurement(
+        # z_gnss_pred_gauss_guess = solution.eskf.ESKF.predict_gnss_measurement(
         #     self, x_nom, x_err, z_gnss)
 
         # print("z_gnss_pred_gauss_guess - z_gnss_pred_gauss MEAN:",z_gnss_pred_gauss_mean - z_gnss_pred_gauss.mean)

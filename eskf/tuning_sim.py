@@ -5,16 +5,16 @@ from datatypes.eskf_states import NominalState, ErrorStateGauss
 
 
 tuning_params_sim = ESKFTuningParams(
-    accm_std=0.004,
-    accm_bias_std=0.25, # Good value 
-    accm_bias_p=2, # good value. 1 is also a good value
+    accm_std=1.57e-3,
+    accm_bias_std=3.0e-2, # Good value 
+    accm_bias_p=1.0e-5, # good value. 1 is also a good value
 
-    gyro_std=0.005,
-    gyro_bias_std=0.002,
-    gyro_bias_p=1 ,
+    gyro_std=5.0e-5,
+    gyro_bias_std=1.0e-2, #0.0002,0.000000002
+    gyro_bias_p=1.0e-5,#1/(10*3600), # 1/(h*3600)
 
-    gnss_std_ne=0.4,
-    gnss_std_d=0.5)
+    gnss_std_ne=0.3,
+    gnss_std_d=2)
 
 
 
@@ -23,16 +23,33 @@ x_nom_init_sim = NominalState(
     np.array([20,  0.03,  0.1]),  # velocity
     RotationQuaterion.from_euler([0., 0., 0.]),  # orientation RotationQuaterion(0.9999988368091641, np.array([0.00071232, 0.00124198, 0.00052581])), 
     np.array([-0.09, -0.09,  0.07]), #np.zeros(3),  # accelerometer bias
-    np.array([-0.001, -0.0007,  0.0004]),# np.zeros(3),  # gyro bias
+    np.array([0, 0, 0]),#np.array([-0.001, -0.0007,  0.0004]),# np.zeros(3),  # gyro bias
     ts=0.)
 
 init_std_sim = np.repeat(repeats=3,  # repeat each element 3 times
                          a=[0.0005,  # position
                             0.06,  # velocity
                             np.deg2rad(0.1),  # angle vector
-                            0.005,  # accelerometer bias
-                            0.000009])  # gyro bias
+                            0.05,  # accelerometer bias
+                            0.005])  # gyro bias
 x_err_init_sim = ErrorStateGauss(np.zeros(15), np.diag(init_std_sim**2), 0.)
+
+
+# x_nom_init_sim = NominalState(
+#     np.array([ 1,  1, -5]),  # position
+#     np.array([20,  0.03,  0.1]),  # velocity
+#     RotationQuaterion.from_euler([0., 0., 0.]),  # orientation RotationQuaterion(0.9999988368091641, np.array([0.00071232, 0.00124198, 0.00052581])), 
+#     np.array([-0.1, -0.1,  0.1]), #np.zeros(3),  # accelerometer bias
+#     np.array([-0.01, -0.001,  0.001]),# np.zeros(3),  # gyro bias
+#     ts=0.)
+
+# init_std_sim = np.repeat(repeats=3,  # repeat each element 3 times
+#                          a=[5.0e-1,  # position
+#                             0.03,  # velocity
+#                             np.deg2rad(0.1),  # angle vector
+#                             0.05,  # accelerometer bias
+#                             0.05])  # gyro bias 0.00005 rad/s 0.0017
+# x_err_init_sim = ErrorStateGauss(np.zeros(15), np.diag(init_std_sim**2), 0.)
 
 
 

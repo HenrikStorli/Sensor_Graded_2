@@ -125,6 +125,7 @@ def get_RMSE(error):
     N = len(error)
     sum_error_squared = 0
     for i in range(N):
+        # print(error[i])
         error_squared = error[i]**2
         sum_error_squared = sum_error_squared + error_squared
     
@@ -137,6 +138,6 @@ def print_RMSE(errors):
 
     names = ["pos x", "pos y", "pos z", "vel u", "vel v", "vel w", "phi", "theta", "psi", "accm bias x", "accm bias y", "accm bias z", "gyro bias phi", "gyro bias theta", "gyro bias psi"]
     for i in range(len(names)):
-        RMSE = get_RMSE(errors[i,:])
+        RMSE = get_RMSE(errors[:,i])
         print("RMSE of", names[i], " is ", round(RMSE,4),"\n" )
  
