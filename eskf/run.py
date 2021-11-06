@@ -14,7 +14,7 @@ from plotting import (plot_state, plot_position_path_3d,
                       plot_nis, plot_errors, plot_nees)
 
 from eskf import ESKF
-from nis_nees import get_NIS, get_NEES, get_error, get_time_pairs
+from nis_nees import get_NIS, get_NEES, get_error, get_time_pairs, print_RMSE
 import config
 import tuning_sim
 import tuning_real
@@ -72,6 +72,7 @@ def main():
         print(f"Running {config.MAX_TIME} seconds of simulated data set")
         (x_true_data, z_imu_data, z_gnss_data, drone_params
          ) = load_sim_data(config.MAX_TIME)
+        # print("x_true_data", x_true_data[0])
         tuning_params = tuning_sim.tuning_params_sim
         x_nom_init = tuning_sim.x_nom_init_sim
         x_err_init = tuning_sim.x_err_init_sim
@@ -117,6 +118,7 @@ def main():
         NEES_gyro_seq = [(get_NEES(gt, est, [12, 13, 14]))
                          for gt, est in err_gt_est_pairs]
 
+        print_RMSE(errors)
         plot_errors(x_times, errors)
         plot_nees(x_times, NEES_pos_seq, NEES_vel_seq,
                   NEES_avec_seq, NEES_accm_seq, NEES_gyro_seq)

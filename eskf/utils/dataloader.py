@@ -26,8 +26,10 @@ def load_sim_data(max_time=np.inf):
     z_gyroscope = loaded_data["zGyro"].T
 
     lever_arm = loaded_data["leverarm"].ravel()
-    S_a = loaded_data["S_a"]
-    S_g = loaded_data["S_g"]
+    S_a =  np.eye(3)#loaded_data["S_a"] #
+    S_g =  np.eye(3)#loaded_data["S_g"] #
+    # print("S_g", S_g)
+    # print("S_a", S_a)
 
     x_nom_true_data = [NominalState(x[:3], x[3:6],
                                     RotationQuaterion(x[6], x[7:10]),

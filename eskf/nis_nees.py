@@ -75,6 +75,22 @@ def get_NEES(error: 'ndarray[15]',
     Returns:
         NEES (float): NEES value
     """
+    # if marginal_idxs != None:
+    #     x_err_marginalized = x_err.marginalize(marginal_idxs)
+    #     NEES_guess = x_err_marginalized.mahalanobis_distance_sq(x_err.mean[marginal_idxs])
+    # else:
+    #     NIS_guess = z_gnss_pred_gauss.mahalanobis_distance_sq(z_gnss.pos)
+
+    if marginal_idxs != None:
+        x_err_marginalized = x_err.marginalize(marginal_idxs)
+        error_marginalized = error[marginal_idxs]
+        v = x_err_marginalized.mean - error_marginalized
+        P = x_err_marginalized.cov
+    else:
+        v = x_err.mean - error
+        P = x_err.cov
+    
+    NEES = v.T@np.linalg.inv(P)@v
 
     if marginal_idxs != None:
         x_err_marginalized = x_err.marginalize(marginal_idxs)
@@ -101,3 +117,33 @@ def get_time_pairs(unique_data, data):
     pairs = [(gt_dict[x.ts], x) for x in data if x.ts in gt_dict]
     times = [pair[0].ts for pair in pairs]
     return times, pairs
+
+def get_average(list):
+    number_of_samples = len(list)
+    sum = 0
+    for value in list:
+        sum = sum + value
+    average = sum/number_of_samples
+
+    return average
+
+def get_RMSE(error):
+
+    N = len(error)
+    sum_error_squared = 0
+    for i in range(N):
+        error_squared = error[i]**2
+        sum_error_squared = sum_error_squared + error_squared
+    
+    mean_error_squared = sum_error_squared/N
+    RMSE = np.sqrt(mean_error_squared)
+
+    return RMSE
+
+def print_RMSE(errors):
+
+    names = ["pos x", "pos y", "pos z", "vel u", "vel v", "vel w", "phi", "theta", "psi", "accm bias x", "accm bias y", "accm bias z", "gyro bias phi", "gyro bias theta", "gyro bias psi"]
+    for i in range(len(names)):
+        RMSE = get_RMSE(errors[i,:])
+        print("RMSE of", names[i], " is ", round(RMSE,4),"\n" )
+ 

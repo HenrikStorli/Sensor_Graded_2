@@ -1,11 +1,14 @@
 import numpy as np
 from numpy import ndarray
 from dataclasses import dataclass
+from numpy.lib.type_check import real
 from scipy.spatial.transform import Rotation
 from cross_matrix import get_cross_matrix 
 from config import DEBUG
 
 import solution
+
+from cross_matrix import get_cross_matrix
 
 
 @dataclass
@@ -70,6 +73,7 @@ class RotationQuaterion:
 
         # Used (10.24)
         conj =RotationQuaterion(self.real_part, -self.vec_part)
+
         return conj
 
     def as_rotmat(self) -> 'ndarray[3,3]':
@@ -121,7 +125,6 @@ class RotationQuaterion:
         alpha =np.arccos(self.real_part)*2
         n=self.vec_part/np.sin(alpha/2)
         avec=n*alpha
-    
         return avec
 
     @staticmethod
