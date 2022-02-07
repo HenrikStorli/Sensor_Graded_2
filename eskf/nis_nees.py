@@ -132,6 +132,7 @@ def get_RMSE(error):
     N = len(error)
     sum_error_squared = 0
     for i in range(N):
+        # print(error[i])
         error_squared = error[i]**2
         sum_error_squared = sum_error_squared + error_squared
     

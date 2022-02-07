@@ -3,7 +3,7 @@ from numpy import ndarray
 from dataclasses import dataclass
 from numpy.lib.type_check import real
 from scipy.spatial.transform import Rotation
-from cross_matrix import get_cross_matrix 
+
 from config import DEBUG
 
 import solution
@@ -54,26 +54,20 @@ class RotationQuaterion:
         """
 
         # TODO replace this with your own code
+        real_part = self.real_part*other.real_part - self.vec_part.T@other.vec_part
+        vec_part = other.real_part*self.vec_part + self.real_part*other.vec_part + get_cross_matrix(self.vec_part)@other.vec_part
 
-        #quaternion_product = solution.quaternion.RotationQuaterion.multiply(
-        #    self, other)
-        
-        # Used (10.21) to calculate quaternion product
-
-        real_part = self.real_part*other.real_part-self.vec_part.T@other.vec_part
-        
-        vec_part = other.real_part*self.vec_part + self.real_part*other.vec_part+get_cross_matrix(self.vec_part)@other.vec_part
-        
-        quaternion_product = RotationQuaterion(real_part, vec_part)
+        quaternion_product = RotationQuaterion(real_part,vec_part)
 
         return quaternion_product
 
     def conjugate(self) -> 'RotationQuaterion':
         """Get the conjugate of the RotationQuaternion"""
 
-        # Used (10.24)
-        conj =RotationQuaterion(self.real_part, -self.vec_part)
 
+        # # TODO replace this with your own code
+        # conj = solution.quaternion.RotationQuaterion.conjugate(self)
+        conj = RotationQuaterion(self.real_part,-self.vec_part)
         return conj
 
     def as_rotmat(self) -> 'ndarray[3,3]':
@@ -84,8 +78,9 @@ class RotationQuaterion:
         """
 
         # TODO replace this with your own code
+        #R = solution.quaternion.RotationQuaterion.as_rotmat(self)
 
-        R = np.identity(3) + 2*self.real_part*get_cross_matrix(self.vec_part)+2*get_cross_matrix(self.vec_part)@get_cross_matrix(self.vec_part)
+        R = np.eye(3) + 2*self.real_part*get_cross_matrix(self.vec_part) + 2*get_cross_matrix(self.vec_part)@get_cross_matrix(self.vec_part)
 
         return R
 
@@ -101,18 +96,16 @@ class RotationQuaterion:
         """
 
         # TODO replace this with your own code
+        #euler = solution.quaternion.RotationQuaterion.as_euler(self)
 
-        eta = self.real_part
+        real_part = self.real_part
         vec_part = self.vec_part
-        epsilon_1=vec_part[0]
-        epsilon_2=vec_part[1]
-        epsilon_3=vec_part[2]
 
+        phi = np.arctan2(2*(vec_part[2]*vec_part[1] + real_part*vec_part[0]), real_part**2 - vec_part[0]**2 - vec_part[1]**2 + vec_part[2]**2)
+        theta = np.arcsin(2*(real_part*vec_part[1] - vec_part[0]*vec_part[2]))
+        psi = np.arctan2(2*(vec_part[0]*vec_part[1] + real_part*vec_part[2]), real_part**2 + vec_part[0]**2 - vec_part[1]**2-vec_part[2]**2)
 
-        phi     =np.arctan2(2*(epsilon_3*epsilon_2+eta*epsilon_1),eta**2-epsilon_1**2-epsilon_2**2+epsilon_3**2)
-        theta   =np.arcsin(2*(eta*epsilon_2-epsilon_1*epsilon_3))
-        psi     =np.arctan2(2*(epsilon_1*epsilon_2+eta*epsilon_3),eta**2+epsilon_1**2-epsilon_2**2-epsilon_3**2)
-        euler   = np.array([phi,theta,psi])
+        euler = np.array([phi, theta, psi])
 
         return euler
 
@@ -120,12 +113,16 @@ class RotationQuaterion:
         """Get the angles vector representation of self
 
         Returns:
-            euler (ndarray[3]): extrinsic euler angles (roll, pitch, yaw)
+            euler (ndarray[3]): extrinsic xyz euler angles (roll, pitch, yaw)
         """
-        alpha =np.arccos(self.real_part)*2
-        n=self.vec_part/np.sin(alpha/2)
-        avec=n*alpha
-        avec = solution.quaternion.RotationQuaterion.as_avec(self)
+
+        # TODO replace this with your own code
+        #avec = solution.quaternion.RotationQuaterion.as_avec(self)
+        # print(self.real_part)
+
+        alpha = np.arccos(self.real_part)*2
+        n = self.vec_part/np.sin(alpha/2)
+        avec = n*alpha
         return avec
 
     @staticmethod
