@@ -1,6 +1,6 @@
 import numpy as np
 # set to 'sim' or 'real'
-RUN = 'sim'
+RUN = 'real'
 
 # set to False for speedup, skips sanity checks for in dataclasses
 DEBUG = True and __debug__
@@ -10,4 +10,4 @@ DEBUG = True and __debug__
 DO_APPROXIMATIONS = False
 
 # max unning time set to np.inf to run through all the data
-MAX_TIME = 200
+MAX_TIME = 100

@@ -141,9 +141,24 @@ def get_RMSE(error):
     return RMSE
 
 def print_RMSE(errors):
-
+    new_names = ["pos", "vel"]
     names = ["pos x", "pos y", "pos z", "vel u", "vel v", "vel w", "phi", "theta", "psi", "accm bias x", "accm bias y", "accm bias z", "gyro bias phi", "gyro bias theta", "gyro bias psi"]
     for i in range(len(names)):
-        RMSE = get_RMSE(errors[i,:])
+        RMSE = get_RMSE(errors[:,i])
         print("RMSE of", names[i], " is ", round(RMSE,4),"\n" )
+    
+    rows, cols =np.shape(errors)
+    position_errors = np.zeros((rows,))
+    for i in range(rows):  
+        position_errors[i] = np.linalg.norm(errors[i,:3],2)
+
+    RMSE = get_RMSE(position_errors)
+    print("RMSE of position is ", round(RMSE,4),"\n" )
+
+    velocity_errors = np.zeros((rows,))
+    for i in range(rows):  
+        velocity_errors[i] = np.linalg.norm(errors[i,3:6],2)
+
+    RMSE = get_RMSE(velocity_errors)
+    print("RMSE of velocity is ", round(RMSE,4),"\n" )
  

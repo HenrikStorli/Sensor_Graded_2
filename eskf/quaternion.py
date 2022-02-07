@@ -125,6 +125,7 @@ class RotationQuaterion:
         alpha =np.arccos(self.real_part)*2
         n=self.vec_part/np.sin(alpha/2)
         avec=n*alpha
+        avec = solution.quaternion.RotationQuaterion.as_avec(self)
         return avec
 
     @staticmethod

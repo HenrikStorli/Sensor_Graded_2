@@ -111,7 +111,7 @@ def plot_position_path_3d(x_nom, x_true=None):
 def plot_nis(times, NIS_xyz, NIS_xy, NIS_z, confidence=0.90):
     confidence_intervals = [np.array(chi2.interval(confidence, ndof))
                             for ndof in range(1, 4)]
-    fig, ax = plt.subplots(3, 1, sharex=True, figsize=(6.4, 5.2))
+    fig, ax = plt.subplots(3, 1, sharex=True, figsize=(7, 5.2))
     fig.canvas.manager.set_window_title("NIS")
 
     for i, (NIS, name, nstates) in enumerate(zip([NIS_xyz, NIS_xy, NIS_z],
@@ -154,7 +154,7 @@ def plot_nis(times, NIS_xyz, NIS_xy, NIS_z, confidence=0.90):
 
 def plot_nees(times, pos, vel, avec, accm, gyro, confidence=0.90):
     ci_lower, ci_upper = np.array(chi2.interval(confidence, 3))
-    fig, ax = plt.subplots(5, 1, sharex=True, figsize=(6.4, 9))
+    fig, ax = plt.subplots(5, 1, sharex=True, figsize=(7.5, 9))
     fig.canvas.manager.set_window_title("NEES")
 
     enu = enumerate(zip(
